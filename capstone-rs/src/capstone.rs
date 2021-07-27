@@ -374,6 +374,56 @@ impl Capstone {
         } else if Self::is_diet() {
             Err(Error::IrrelevantDataInDiet)
         } else {
+            /*
+             * To assure that our returned InsnDetail's regs_*() accessors
+             * return the correct data, we need to call into cs_regs_access().
+             * This interface is unsafe even by C's own poor standards for
+             * itself: it takes no bounds and has essentially undefined
+             * behavior if the arrays passed in correspond to the (same-sized)
+             * arrays in the detail member of the cs_insn.  We therefore call
+             * into this interface with a scratch buffer on our stack and then
+             * manually copy it into the same structures in our underlying
+             * insn.  This could presumably be made less verbose, but given
+             * the degree of unsafety, we have erred on the side of caution...
+             */
+            unsafe {
+                let mut rbuffer: [u16; 64] = [0; 64];
+                let mut wbuffer: [u16; 64] = [0; 64];
+                let mut rcnt: u8 = 0;
+                let mut wcnt: u8 = 0;
+                let mut detail = insn.insn.detail;
+
+                let regs_read: *mut u16 = &mut rbuffer[0];
+                let regs_write: *mut u16 = &mut wbuffer[0];
+                let regs_read_count: *mut u8 = &mut rcnt;
+                let regs_write_count: *mut u8 = &mut wcnt;
+
+                let err = cs_regs_access(
+                    self.csh(),
+                    &insn.insn,
+                    regs_read,
+                    regs_read_count,
+                    regs_write,
+                    regs_write_count,
+                );
+
+                if err != cs_err::CS_ERR_OK {
+                    return Err(err.into());
+                }
+
+                for i in 0..rcnt {
+                    (*detail).regs_read[i as usize] = rbuffer[i as usize];
+                }
+
+                (*detail).regs_read_count = rcnt;
+
+                for i in 0..wcnt {
+                    (*detail).regs_write[i as usize] = wbuffer[i as usize];
+                }
+
+                (*detail).regs_write_count = wcnt;
+            }
+
             Ok(unsafe { insn.detail(self.arch) })
         }
     }
