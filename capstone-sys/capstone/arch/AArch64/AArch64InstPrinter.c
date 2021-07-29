@@ -174,8 +174,6 @@ void AArch64_printInst(MCInst *MI, SStream *O, void *Info)
 					MI->flat_insn->detail->arm64.op_count++;
 				}
 
-				MCInst_setOpcodePub(MI, AArch64_map_insn(AsmMnemonic));
-
 				return;
 			}
 		}
@@ -216,8 +214,6 @@ void AArch64_printInst(MCInst *MI, SStream *O, void *Info)
 						getRegisterName(MCOperand_getReg(Op1), AArch64_NoRegAltName));
 
 				printInt32Bang(O, shift);
-
-				MCInst_setOpcodePub(MI, AArch64_map_insn(AsmMnemonic));
 
 				if (MI->csh->detail) {
 #ifndef CAPSTONE_DIET
@@ -262,8 +258,6 @@ void AArch64_printInst(MCInst *MI, SStream *O, void *Info)
 			SStream_concat0(O, ", ");
 
 			printInt32Bang(O, (int)MCOperand_getImm(Op3) + 1);
-
-			MCInst_setOpcodePub(MI, AArch64_map_insn(IsSigned ? "sbfiz" : "ubfiz"));
 
 			if (MI->csh->detail) {
 #ifndef CAPSTONE_DIET
@@ -312,8 +306,6 @@ void AArch64_printInst(MCInst *MI, SStream *O, void *Info)
 		printInt32Bang(O, (int)MCOperand_getImm(Op2));
 		SStream_concat0(O, ", ");
 		printInt32Bang(O, (int)MCOperand_getImm(Op3) - (int)MCOperand_getImm(Op2) + 1);
-
-		MCInst_setOpcodePub(MI, AArch64_map_insn(IsSigned ? "sbfx" : "ubfx"));
 
 		if (MI->csh->detail) {
 #ifndef CAPSTONE_DIET
@@ -373,7 +365,6 @@ void AArch64_printInst(MCInst *MI, SStream *O, void *Info)
 			printInt32Bang(O, LSB);
 			SStream_concat0(O, ", ");
 			printInt32Bang(O, Width);
-			MCInst_setOpcodePub(MI, AArch64_map_insn("bfc"));
 
 			if (MI->csh->detail) {
 #ifndef CAPSTONE_DIET
@@ -418,8 +409,6 @@ void AArch64_printInst(MCInst *MI, SStream *O, void *Info)
 			printInt32Bang(O, LSB);
 			SStream_concat0(O, ", ");
 			printInt32Bang(O, Width);
-
-			MCInst_setOpcodePub(MI, AArch64_map_insn("bfi"));
 
 			if (MI->csh->detail) {
 #ifndef CAPSTONE_DIET
@@ -470,8 +459,6 @@ void AArch64_printInst(MCInst *MI, SStream *O, void *Info)
 		printInt32Bang(O, LSB);
 		SStream_concat0(O, ", ");
 		printInt32Bang(O, Width);
-
-		MCInst_setOpcodePub(MI, AArch64_map_insn("bfxil"));
 
 		if (MI->csh->detail) {
 #ifndef CAPSTONE_DIET
@@ -545,8 +532,6 @@ void AArch64_printInst(MCInst *MI, SStream *O, void *Info)
 				MI->flat_insn->detail->arm64.op_count++;
 			}
 
-			MCInst_setOpcodePub(MI, AArch64_map_insn("mov"));
-
 			return;
 		}
 	}
@@ -581,8 +566,6 @@ void AArch64_printInst(MCInst *MI, SStream *O, void *Info)
 				MI->flat_insn->detail->arm64.op_count++;
 			}
 
-			MCInst_setOpcodePub(MI, AArch64_map_insn("mov"));
-
 			return;
 		}
 	}
@@ -615,8 +598,6 @@ void AArch64_printInst(MCInst *MI, SStream *O, void *Info)
 				MI->flat_insn->detail->arm64.op_count++;
 			}
 
-			MCInst_setOpcodePub(MI, AArch64_map_insn("mov"));
-
 			return;
 		}
 	}
@@ -625,7 +606,6 @@ void AArch64_printInst(MCInst *MI, SStream *O, void *Info)
 	// not encoded, so for printing it is treated as a special case here:
 	if (Opcode == AArch64_TSB) {
 		SStream_concat0(O, "tsb\tcsync");
-		MCInst_setOpcodePub(MI, AArch64_map_insn("tsb"));
 		return;
 	}
 
@@ -633,7 +613,6 @@ void AArch64_printInst(MCInst *MI, SStream *O, void *Info)
 
 	mnem = printAliasInstr(MI, O, (MCRegisterInfo *)Info);
 	if (mnem) {
-		MCInst_setOpcodePub(MI, AArch64_map_insn(mnem));
 		cs_mem_free(mnem);
 
 		switch(MCInst_getOpcode(MI)) {
@@ -790,8 +769,6 @@ static bool printSysAlias(MCInst *MI, SStream *O)
 	if (NeedsReg) {
 		SStream_concat(O, ", %s", getRegisterName(MCOperand_getReg(MCInst_getOperand(MI, 4)), AArch64_NoRegAltName));
 	}
-
-	MCInst_setOpcodePub(MI, AArch64_map_insn(Ins));
 
 	if (MI->csh->detail) {
 #if 0
