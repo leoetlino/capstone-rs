@@ -9,10 +9,20 @@ use capstone_sys::*;
 use crate::arch::ArchDetail;
 use crate::constants::Arch;
 use crate::ffi::str_from_cstr_ptr;
+use crate::{Capstone, CsResult};
 
 /// Representation of the array of instructions returned by disasm
 #[derive(Debug)]
 pub struct Instructions<'a>(&'a mut [cs_insn]);
+
+pub struct InsnIter<'a, 'code> {
+    handle: &'a Capstone,
+    insn: *mut cs_insn,
+    current_code: *const u8,
+    current_size: usize,
+    current_address: u64,
+    _marker: PhantomData<&'code [u8]>,
+}
 
 /// Integer type used in `InsnId`
 pub type InsnIdInt = u32;
@@ -191,6 +201,49 @@ impl_SliceIterator_wrapper!(
         ]
     }
 );
+
+impl<'a, 'code> InsnIter<'a, 'code> {
+    pub(crate) fn new(handle: &'a Capstone, code: &'code [u8], addr: u64) -> CsResult<Self> {
+        let insn = unsafe { cs_malloc(handle.csh()) };
+        if insn.is_null() {
+            return Err(crate::error::Error::OutOfMemory);
+        }
+
+        Ok(Self {
+            handle,
+            insn,
+            current_code: code.as_ptr(),
+            current_size: code.len(),
+            current_address: addr,
+            _marker: PhantomData,
+        })
+    }
+
+    #[inline]
+    pub fn next<'b>(&'b mut self) -> Option<Insn<'b>> {
+        let ok = unsafe {
+            cs_disasm_iter(
+                self.handle.csh(),
+                &mut self.current_code as *mut *const u8,
+                &mut self.current_size as *mut usize,
+                &mut self.current_address as *mut u64,
+                self.insn,
+            )
+        };
+
+        if ok {
+            Some(unsafe { Insn::from_raw(self.insn) })
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a, 'code> Drop for InsnIter<'a, 'code> {
+    fn drop(&mut self) {
+        unsafe { cs_free(self.insn, 1) }
+    }
+}
 
 /// A wrapper for the raw capstone-sys instruction
 #[repr(transparent)]
