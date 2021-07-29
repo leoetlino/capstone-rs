@@ -30,35 +30,14 @@ void SStream_Init(SStream *ss)
 
 void SStream_concat0(SStream *ss, const char *s)
 {
-#ifndef CAPSTONE_DIET
-	unsigned int len = (unsigned int) strlen(s);
-
-	memcpy(ss->buffer + ss->index, s, len);
-	ss->index += len;
-	ss->buffer[ss->index] = '\0';
-#endif
 }
 
 void SStream_concat1(SStream *ss, const char c)
 {
-#ifndef CAPSTONE_DIET
-	ss->buffer[ss->index] = c;
-	ss->index++;
-	ss->buffer[ss->index] = '\0';
-#endif
 }
 
 void SStream_concat(SStream *ss, const char *fmt, ...)
 {
-#ifndef CAPSTONE_DIET
-	va_list ap;
-	int ret;
-
-	va_start(ap, fmt);
-	ret = cs_vsnprintf(ss->buffer + ss->index, sizeof(ss->buffer) - (ss->index + 1), fmt, ap);
-	va_end(ap);
-	ss->index += ret;
-#endif
 }
 
 // print number with prefix #
