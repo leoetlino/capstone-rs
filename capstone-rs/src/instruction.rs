@@ -12,6 +12,7 @@ use crate::arch::ArchDetail;
 use crate::constants::Arch;
 
 use crate::ffi::str_from_cstr_ptr;
+use crate::{Capstone, CsResult};
 
 /// Represents a slice of [`Insn`] returned by [`Capstone`](crate::Capstone) `disasm*()` methods.
 ///
@@ -27,6 +28,15 @@ use crate::ffi::str_from_cstr_ptr;
 /// ```
 #[derive(Debug)]
 pub struct Instructions<'a>(&'a mut [cs_insn]);
+
+pub struct InsnIter<'a, 'code> {
+    handle: &'a Capstone,
+    insn: *mut cs_insn,
+    current_code: *const u8,
+    current_size: usize,
+    current_address: u64,
+    _marker: PhantomData<&'code [u8]>,
+}
 
 /// Integer type used in `InsnId`
 pub type InsnIdInt = u32;
@@ -156,6 +166,51 @@ impl<'a> Drop for Instructions<'a> {
                 cs_free(self.0.as_mut_ptr(), self.len());
             }
         }
+    }
+}
+
+impl<'a, 'code> InsnIter<'a, 'code> {
+    pub(crate) fn new(handle: &'a Capstone, code: &'code [u8], addr: u64) -> CsResult<Self> {
+        let insn = unsafe { cs_malloc(handle.csh()) };
+        if insn.is_null() {
+            return Err(crate::error::Error::OutOfMemory);
+        }
+
+        Ok(Self {
+            handle,
+            insn,
+            current_code: code.as_ptr(),
+            current_size: code.len(),
+            current_address: addr,
+            _marker: PhantomData,
+        })
+    }
+
+    #[inline]
+    #[allow(clippy::should_implement_trait)]
+    pub fn next(&mut self) -> Option<Insn> {
+        let ok = unsafe {
+            cs_disasm_iter(
+                self.handle.csh(),
+                &mut self.current_code as *mut *const u8,
+                &mut self.current_size as *mut usize,
+                &mut self.current_address as *mut u64,
+                self.insn,
+            )
+        };
+
+        if ok {
+            Some(unsafe { Insn::from_raw(self.insn) })
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a, 'code> Drop for InsnIter<'a, 'code> {
+    fn drop(&mut self) {
+        unsafe { cs_free(self.insn, 1) }
+        self.insn = core::ptr::null_mut();
     }
 }
 

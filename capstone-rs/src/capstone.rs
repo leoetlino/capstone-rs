@@ -10,7 +10,7 @@ use capstone_sys::*;
 use crate::arch::CapstoneBuilder;
 use crate::constants::{Arch, Endian, ExtraMode, Mode, OptValue, Syntax};
 use crate::error::*;
-use crate::instruction::{Insn, InsnDetail, InsnGroupId, InsnId, Instructions, RegId};
+use crate::instruction::{Insn, InsnDetail, InsnGroupId, InsnId, InsnIter, Instructions, RegId};
 
 use {crate::ffi::str_from_cstr_ptr, alloc::string::ToString, libc::c_uint};
 
@@ -166,6 +166,26 @@ impl Capstone {
         }
     }
 
+    /// Disassemble all instructions in `code` one by one.
+    ///
+    /// This is less convenient to use than the iterator interface offered by disasm_all
+    /// but usually more performant because this avoids reallocating Capstone instructions.
+    ///
+    /// ## Example
+    /// ```
+    /// let mut iter = cs.disasm_iter(code, addr);
+    /// while let Some(insn) = iter.next() {
+    ///     // ...
+    /// }
+    /// ```
+    pub fn disasm_iter<'a, 'code>(
+        &'a self,
+        code: &'code [u8],
+        addr: u64,
+    ) -> CsResult<InsnIter<'a, 'code>> {
+        InsnIter::new(&self, code, addr)
+    }
+
     /// Disassemble all instructions in buffer
     ///
     /// ```
@@ -224,7 +244,7 @@ impl Capstone {
 
     /// Returns csh handle
     #[inline]
-    fn csh(&self) -> csh {
+    pub(crate) fn csh(&self) -> csh {
         self.csh as csh
     }
 
