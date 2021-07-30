@@ -671,6 +671,12 @@ macro_rules! def_arch_details_struct {
                 $OperandIterator::new(&self.0.operands[..self.0.op_count as usize])
             }
         }
+
+        impl<'a> $InsnDetail<'a> {
+            pub fn operands_ref(&self) -> &'a [$cs_arch_op] {
+                &(self.0.operands[..self.0.op_count as usize])
+            }
+        }
     }
 }
 
